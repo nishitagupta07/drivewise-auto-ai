@@ -63,49 +63,52 @@ function Landing() {
 
       {/* Full-viewport hero */}
       <section
-        className="relative h-screen min-h-[720px] w-full flex items-center justify-center overflow-hidden"
-        style={{ perspective: "1200px" }}
+        className="relative min-h-screen w-full flex items-center justify-center overflow-hidden pt-24 pb-16"
+        style={{ perspective: "1400px" }}
       >
         {/* Background gradients */}
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,theme(colors.primary/0.18),transparent_60%)]" />
         <div className="absolute inset-0 bg-gradient-to-b from-transparent via-background/40 to-background" />
         <ParticleField />
 
-        {/* Ambient moving glow behind car */}
+        {/* Ambient moving glow */}
         <div
           ref={glowRef}
           aria-hidden
-          className="pointer-events-none absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 h-[680px] w-[680px] rounded-full bg-primary/25 blur-[140px] transition-transform duration-500 ease-out"
+          className="pointer-events-none absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 h-[640px] w-[640px] rounded-full bg-primary/25 blur-[140px] transition-transform duration-700 ease-out"
         />
 
-        {/* Center stage */}
-        <div className="relative z-10 mx-auto max-w-6xl px-6 text-center">
-          <div className="inline-flex items-center gap-2 rounded-full glass px-3 py-1 text-xs text-muted-foreground mb-8 animate-fade-up">
+        {/* Center stage — clean vertical stack */}
+        <div className="relative z-10 mx-auto max-w-6xl px-6 w-full flex flex-col items-center text-center">
+          <div className="inline-flex items-center gap-2 rounded-full glass px-3 py-1 text-xs text-muted-foreground animate-fade-up">
             <span className="h-1.5 w-1.5 rounded-full bg-primary animate-glow-pulse" />
             Metadata-Aware · Brochure Grounded · Source Attributed
           </div>
 
-          <h1 className="font-display text-6xl md:text-8xl lg:text-9xl font-bold tracking-tight leading-[0.9] animate-fade-up">
+          <h1 className="mt-6 font-display text-5xl sm:text-6xl md:text-7xl font-bold tracking-tight leading-[1.05] animate-fade-up">
             Drive <span className="gradient-text">Wise</span>
           </h1>
 
-          <p className="mt-6 text-lg md:text-2xl text-muted-foreground animate-fade-up" style={{ animationDelay: "80ms" }}>
+          <p className="mt-4 text-base md:text-xl text-muted-foreground max-w-2xl animate-fade-up" style={{ animationDelay: "80ms" }}>
             Official Brochures. <span className="text-foreground">Intelligent Answers.</span>
           </p>
 
-          {/* SUV visual — layered for depth */}
+          {/* SUV visual */}
           <div
-            className="relative mx-auto mt-10 md:mt-14 w-full max-w-3xl animate-fade-up"
+            className="relative mx-auto mt-10 md:mt-12 w-full max-w-3xl animate-fade-up"
             style={{ animationDelay: "160ms" }}
           >
-            <div
-              ref={carRef}
-              className="relative will-change-transform transition-transform duration-500 ease-out animate-float-slow"
-              style={{ transformStyle: "preserve-3d" }}
-            >
-              {/* Reflection halo */}
-              <div className="absolute -inset-6 rounded-[2rem] bg-primary/20 blur-3xl" />
-              <div className="relative rounded-[2rem] overflow-hidden gradient-border">
+            <div className="animate-float-slow" style={{ transformStyle: "preserve-3d" }}>
+              <div
+                ref={carRef}
+                className="relative will-change-transform transition-transform duration-[900ms] ease-out"
+                style={{ transformStyle: "preserve-3d" }}
+              >
+              {/* Layered halos for depth */}
+              <div className="absolute -inset-10 rounded-[3rem] bg-primary/20 blur-3xl opacity-70" />
+              <div className="absolute -inset-4 rounded-[2.5rem] bg-primary/10 blur-2xl" />
+
+              <div className="relative rounded-[2rem] overflow-hidden gradient-border shadow-glow">
                 <img
                   src={heroCar}
                   alt="Premium concept SUV under blue studio light"
@@ -113,29 +116,32 @@ function Landing() {
                   height={1000}
                   className="w-full h-auto object-cover"
                 />
-                {/* Soft top gradient for ambient lighting */}
-                <div className="absolute inset-0 bg-gradient-to-b from-primary/10 via-transparent to-background/70" />
-                {/* Highlight sweep */}
-                <div className="absolute inset-x-0 top-0 h-1/3 bg-gradient-to-b from-white/10 to-transparent mix-blend-overlay" />
+                {/* Ambient lighting layers */}
+                <div className="absolute inset-0 bg-gradient-to-b from-primary/15 via-transparent to-background/70" />
+                <div className="absolute inset-x-0 top-0 h-1/3 bg-gradient-to-b from-white/12 to-transparent mix-blend-overlay" />
+                {/* Slow moving highlight sweep */}
+                <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/[0.08] to-transparent animate-sweep pointer-events-none" />
               </div>
+
               {/* Ground reflection */}
               <div
                 aria-hidden
-                className="mx-auto mt-[-1px] h-16 w-[80%] rounded-[50%] bg-primary/25 blur-2xl opacity-70"
+                className="mx-auto mt-[-8px] h-16 w-[70%] rounded-[50%] bg-primary/30 blur-2xl opacity-70"
               />
+            </div>
             </div>
           </div>
 
-          {/* CTA */}
+          {/* CTAs */}
           <div className="mt-10 flex flex-wrap items-center justify-center gap-4 animate-fade-up" style={{ animationDelay: "240ms" }}>
             <Link
               to="/app"
-              className="group relative inline-flex items-center gap-2 rounded-full bg-primary px-8 py-4 text-sm md:text-base font-semibold text-primary-foreground shadow-glow hover:scale-[1.03] transition animate-glow-pulse"
+              className="group relative inline-flex items-center gap-2 rounded-full bg-primary px-7 py-3.5 text-sm md:text-base font-semibold text-primary-foreground shadow-glow hover:scale-[1.03] transition"
             >
               Get Started
               <ArrowRight className="h-4 w-4 transition group-hover:translate-x-1" />
             </Link>
-            <a href="#features" className="rounded-full glass px-6 py-4 text-sm font-medium hover:bg-secondary/50 transition">
+            <a href="#features" className="rounded-full glass px-6 py-3.5 text-sm font-medium hover:bg-secondary/50 transition">
               See how it works
             </a>
           </div>

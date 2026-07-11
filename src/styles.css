@@ -182,8 +182,12 @@
   50% { transform: translateY(-12px); }
 }
 @keyframes float-slow {
-  0%, 100% { transform: translateY(0) rotate(0); }
-  50% { transform: translateY(-18px) rotate(1deg); }
+  0%, 100% { transform: translateY(0) rotateX(0) rotateY(0); }
+  50% { transform: translateY(-14px) rotateX(1.5deg) rotateY(-0.5deg); }
+}
+@keyframes sweep {
+  0% { transform: translateX(-120%); }
+  100% { transform: translateX(120%); }
 }
 @keyframes drift {
   0% { transform: translate(0, 0); opacity: 0; }
@@ -218,6 +222,7 @@
 
 .animate-float { animation: float 6s ease-in-out infinite; }
 .animate-float-slow { animation: float-slow 9s ease-in-out infinite; }
+.animate-sweep { animation: sweep 6s ease-in-out infinite; }
 .animate-glow-pulse { animation: glow-pulse 3s ease-in-out infinite; }
 .animate-fade-up { animation: fade-up 0.7s cubic-bezier(0.2, 0.9, 0.2, 1) both; }
 .animate-scale-in { animation: scale-in 0.5s ease-out both; }

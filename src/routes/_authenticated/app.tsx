@@ -12,7 +12,16 @@ import {
   Car, Shield, Gauge, Cpu, Palette, Camera, Cog, LogOut, ChevronRight,
   PanelLeftOpen, PanelLeftClose, Info, FileText, Wrench, Layers,
   Zap, Fuel, Users, Wind, Sun, Music, Smartphone, ChevronDown, Trash2,
+  History, Clock,
 } from "lucide-react";
+
+type RecentSearch = {
+  id: string;
+  question: string;
+  brand: string | null;
+  model: string | null;
+  at: string;
+};
 
 export const Route = createFileRoute("/_authenticated/app")({
   head: () => ({ meta: [{ title: "Drive Wise — Explore" }, { name: "robots", content: "noindex" }] }),
@@ -27,7 +36,9 @@ function AppPage() {
   const [modelId, setModelId] = useState<string | null>(null);
   const [chatOpen, setChatOpen] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [recentOpen, setRecentOpen] = useState(false);
   const [activeThreadId, setActiveThreadId] = useState<string | null>(null);
+  const [pendingInput, setPendingInput] = useState<string | null>(null);
 
   const brand: Brand | null = brandId ? (getBrand(brandId) ?? null) : null;
   const model: Model | null = brand && modelId ? (getModel(brand.id, modelId) ?? null) : null;
@@ -36,6 +47,7 @@ function AppPage() {
     <div className="min-h-screen relative">
       <AppHeader
         onOpenHistory={() => setSidebarOpen(true)}
+        onOpenRecent={() => setRecentOpen(true)}
       />
 
       <HistorySidebar
@@ -51,6 +63,21 @@ function AppPage() {
           setStep(m ? "brochure" : "brand");
           setChatOpen(true);
           setSidebarOpen(false);
+        }}
+      />
+
+      <RecentSearchesPanel
+        open={recentOpen}
+        onClose={() => setRecentOpen(false)}
+        onPick={(r) => {
+          const b = r.brand ? BRANDS.find((x) => x.name === r.brand) : null;
+          const m = b && r.model ? b.models.find((x) => x.name === r.model) : null;
+          setBrandId(b?.id ?? null);
+          setModelId(m?.id ?? null);
+          setStep(m ? "brochure" : b ? "model" : "brand");
+          setPendingInput(r.question);
+          setChatOpen(true);
+          setRecentOpen(false);
         }}
       />
 
@@ -96,6 +123,8 @@ function AppPage() {
           threadId={activeThreadId}
           onThreadId={setActiveThreadId}
           onClose={() => setChatOpen(false)}
+          pendingInput={pendingInput}
+          onPendingConsumed={() => setPendingInput(null)}
         />
       )}
     </div>
@@ -104,7 +133,7 @@ function AppPage() {
 
 /* -------------------- Header -------------------- */
 
-function AppHeader({ onOpenHistory }: { onOpenHistory: () => void }) {
+function AppHeader({ onOpenHistory, onOpenRecent }: { onOpenHistory: () => void; onOpenRecent: () => void }) {
   async function signOut() {
     await supabase.auth.signOut();
     window.location.href = "/";
@@ -123,11 +152,124 @@ function AppHeader({ onOpenHistory }: { onOpenHistory: () => void }) {
             <span className="font-display font-semibold truncate">Drive Wise</span>
           </div>
         </div>
-        <button onClick={signOut} className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition">
-          <LogOut className="h-4 w-4" /> <span className="hidden sm:inline">Sign out</span>
-        </button>
+        <div className="flex items-center gap-2">
+          <button onClick={onOpenRecent} className="inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm text-muted-foreground hover:text-foreground hover:bg-secondary/60 transition" aria-label="Recent searches">
+            <History className="h-4 w-4" /> <span className="hidden sm:inline">Recent</span>
+          </button>
+          <button onClick={signOut} className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition">
+            <LogOut className="h-4 w-4" /> <span className="hidden sm:inline">Sign out</span>
+          </button>
+        </div>
       </div>
     </header>
+  );
+}
+
+/* -------------------- Recent searches panel -------------------- */
+
+function RecentSearchesPanel({
+  open, onClose, onPick,
+}: {
+  open: boolean;
+  onClose: () => void;
+  onPick: (r: RecentSearch) => void;
+}) {
+  const [items, setItems] = useState<RecentSearch[]>([]);
+
+  useEffect(() => {
+    function load() {
+      try {
+        const raw = localStorage.getItem("dw:recent-searches");
+        setItems(raw ? (JSON.parse(raw) as RecentSearch[]) : []);
+      } catch { setItems([]); }
+    }
+    load();
+    window.addEventListener("dw:recent-searches-updated", load);
+    window.addEventListener("storage", load);
+    return () => {
+      window.removeEventListener("dw:recent-searches-updated", load);
+      window.removeEventListener("storage", load);
+    };
+  }, []);
+
+  function clearAll() {
+    localStorage.removeItem("dw:recent-searches");
+    setItems([]);
+    window.dispatchEvent(new Event("dw:recent-searches-updated"));
+    toast.success("Recent searches cleared");
+  }
+
+  function remove(id: string) {
+    const next = items.filter((i) => i.id !== id);
+    localStorage.setItem("dw:recent-searches", JSON.stringify(next));
+    setItems(next);
+    window.dispatchEvent(new Event("dw:recent-searches-updated"));
+  }
+
+  function relTime(iso: string) {
+    const d = new Date(iso).getTime();
+    const diff = Date.now() - d;
+    const m = Math.floor(diff / 60000);
+    if (m < 1) return "just now";
+    if (m < 60) return `${m}m ago`;
+    const h = Math.floor(m / 60);
+    if (h < 24) return `${h}h ago`;
+    const days = Math.floor(h / 24);
+    if (days < 7) return `${days}d ago`;
+    return new Date(iso).toLocaleDateString();
+  }
+
+  return (
+    <>
+      <div className={`fixed inset-0 z-40 bg-background/60 backdrop-blur-sm transition ${open ? "opacity-100" : "opacity-0 pointer-events-none"}`} onClick={onClose} />
+      <aside className={`fixed right-0 top-0 z-50 h-full w-[90vw] max-w-sm glass-strong border-l border-border/60 transition-transform ${open ? "translate-x-0" : "translate-x-full"}`}>
+        <div className="flex items-center justify-between p-4 border-b border-border/60">
+          <div className="flex items-center gap-2 font-semibold"><History className="h-4 w-4 text-primary" /> Recent Searches</div>
+          <div className="flex items-center gap-1">
+            {items.length > 0 && (
+              <button onClick={clearAll} className="text-xs rounded-lg px-2 py-1 text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition">Clear</button>
+            )}
+            <button onClick={onClose} className="p-2 rounded-lg hover:bg-secondary/60"><X className="h-4 w-4" /></button>
+          </div>
+        </div>
+        <div className="p-2 overflow-y-auto h-[calc(100%-56px)]">
+          {items.length === 0 && (
+            <div className="p-6 text-sm text-muted-foreground">No recent searches yet. Ask the assistant anything to see your history here.</div>
+          )}
+          {items.map((r) => (
+            <div key={r.id} className="group rounded-xl p-3 mb-1 cursor-pointer transition hover:bg-secondary/50">
+              <div className="flex items-start gap-2" onClick={() => onPick(r)}>
+                <div className="grid h-8 w-8 place-items-center rounded-lg bg-primary/15 shrink-0">
+                  <MessageCircle className="h-4 w-4 text-primary" />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <div className="text-sm font-medium line-clamp-2">{r.question}</div>
+                  <div className="flex items-center gap-2 mt-1 flex-wrap">
+                    {(r.brand || r.model) ? (
+                      <span className="text-[10px] rounded-md bg-primary/10 text-primary px-1.5 py-0.5">
+                        {r.brand ?? "—"}{r.model ? ` · ${r.model}` : ""}
+                      </span>
+                    ) : (
+                      <span className="text-[10px] rounded-md bg-secondary/60 text-muted-foreground px-1.5 py-0.5">General</span>
+                    )}
+                    <span className="text-[10px] text-muted-foreground inline-flex items-center gap-1">
+                      <Clock className="h-3 w-3" />{relTime(r.at)}
+                    </span>
+                  </div>
+                </div>
+                <button
+                  onClick={(e) => { e.stopPropagation(); remove(r.id); }}
+                  className="opacity-0 group-hover:opacity-100 p-1 rounded hover:bg-destructive/20 text-muted-foreground hover:text-destructive transition"
+                  aria-label="Remove"
+                >
+                  <Trash2 className="h-3.5 w-3.5" />
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+      </aside>
+    </>
   );
 }
 
@@ -533,8 +675,9 @@ const PIPELINE_STEPS = [
   "Finalizing answer…",
 ];
 
-function ChatDock({ brand, model, threadId, onThreadId, onClose }: {
+function ChatDock({ brand, model, threadId, onThreadId, onClose, pendingInput, onPendingConsumed }: {
   brand: Brand | null; model: Model | null; threadId: string | null; onThreadId: (id: string | null) => void; onClose: () => void;
+  pendingInput?: string | null; onPendingConsumed?: () => void;
 }) {
   const [input, setInput] = useState("");
   const [messages, setMessages] = useState<ChatMsg[]>([]);
@@ -546,6 +689,15 @@ function ChatDock({ brand, model, threadId, onThreadId, onClose }: {
   const scrollRef = useRef<HTMLDivElement>(null);
   const qc = useQueryClient();
   const inputRef = useRef<HTMLTextAreaElement>(null);
+
+  useEffect(() => {
+    if (pendingInput) {
+      setInput(pendingInput);
+      inputRef.current?.focus();
+      onPendingConsumed?.();
+    }
+  }, [pendingInput, onPendingConsumed]);
+
 
   // Load thread messages when threadId changes
   useEffect(() => {
@@ -575,17 +727,6 @@ function ChatDock({ brand, model, threadId, onThreadId, onClose }: {
 
   const mut = useMutation({
     mutationFn: async (q: string) => {
-      if (!brand || !model) {
-        // Local guard response — no server call until brand/model selected
-        await new Promise((r) => setTimeout(r, 200));
-        return {
-          threadId: null as string | null,
-          answer: "Please select a car brand and model first so I can answer using the correct brochure.",
-          sources: [] as SourceRef[],
-          metadata: undefined as Record<string, unknown> | undefined,
-          _local: true as const,
-        };
-      }
       // Animate pipeline steps
       for (let i = 0; i < PIPELINE_STEPS.length - 1; i++) {
         setLoadingStep(i);
@@ -595,21 +736,23 @@ function ChatDock({ brand, model, threadId, onThreadId, onClose }: {
       const res = await ask({
         data: {
           threadId,
-          brand: brand.name, brandId: brand.id,
-          model: model.name, modelId: model.id,
+          brand: brand?.name ?? null,
+          brandId: brand?.id ?? null,
+          model: model?.name ?? null,
+          modelId: model?.id ?? null,
           question: q,
         },
       });
-      return { ...res, _local: false as const };
+      return res;
     },
     onSuccess: (res) => {
-      if (!res._local && res.threadId && !threadId) onThreadId(res.threadId);
+      if (res.threadId && !threadId) onThreadId(res.threadId);
       setMessages((prev) => [...prev, {
         id: crypto.randomUUID(), role: "assistant", content: res.answer,
         sources: res.sources, metadata: res.metadata, createdAt: new Date().toISOString(),
       }]);
       setLoadingStep(-1);
-      if (!res._local) qc.invalidateQueries({ queryKey: ["threads"] });
+      qc.invalidateQueries({ queryKey: ["threads"] });
       inputRef.current?.focus();
     },
     onError: (err) => {
@@ -622,6 +765,17 @@ function ChatDock({ brand, model, threadId, onThreadId, onClose }: {
     const q = input.trim();
     if (!q || mut.isPending) return;
     setMessages((prev) => [...prev, { id: crypto.randomUUID(), role: "user", content: q, createdAt: new Date().toISOString() }]);
+    // Save to recent searches (localStorage)
+    try {
+      const raw = localStorage.getItem("dw:recent-searches");
+      const arr = raw ? (JSON.parse(raw) as RecentSearch[]) : [];
+      const next: RecentSearch[] = [
+        { id: crypto.randomUUID(), question: q, brand: brand?.name ?? null, model: model?.name ?? null, at: new Date().toISOString() },
+        ...arr,
+      ].slice(0, 50);
+      localStorage.setItem("dw:recent-searches", JSON.stringify(next));
+      window.dispatchEvent(new Event("dw:recent-searches-updated"));
+    } catch { /* ignore storage errors */ }
     setInput("");
     mut.mutate(q);
   }
@@ -633,9 +787,11 @@ function ChatDock({ brand, model, threadId, onThreadId, onClose }: {
     "Does it support Android Auto?",
     "What engine does it use?",
   ] : [
-    "What can you help me with?",
-    "How does Drive Wise work?",
-    "Which brands are supported?",
+    "Which SUV is best for a family of 5?",
+    "Which brand offers better mileage?",
+    "Which brand is known for safety?",
+    "Which car should I buy under ₹15 lakh?",
+    "Which brand has the lowest maintenance cost?",
   ], [model]);
 
   const lastMetadata = [...messages].reverse().find((m) => m.role === "assistant" && m.metadata)?.metadata;

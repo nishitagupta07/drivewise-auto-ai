@@ -7,10 +7,10 @@ import { createLovableAiGatewayProvider } from "./ai-gateway.server";
 
 const AskInput = z.object({
   threadId: z.string().uuid().nullable(),
-  brand: z.string().min(1),
-  brandId: z.string().min(1),
-  model: z.string().min(1),
-  modelId: z.string().min(1),
+  brand: z.string().nullable(),
+  brandId: z.string().nullable(),
+  model: z.string().nullable(),
+  modelId: z.string().nullable(),
   question: z.string().min(1).max(1000),
 });
 
@@ -27,6 +27,7 @@ export const askQuestion = createServerFn({ method: "POST" })
   .inputValidator((input: unknown) => AskInput.parse(input))
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
+    const hasSelection = Boolean(data.brandId && data.modelId && data.brand && data.model);
 
     // Ensure thread exists
     let threadId = data.threadId;
@@ -35,8 +36,8 @@ export const askQuestion = createServerFn({ method: "POST" })
         .from("chat_threads")
         .insert({
           user_id: userId,
-          brand: data.brand,
-          model: data.model,
+          brand: data.brand ?? "General",
+          model: data.model ?? "General",
           title: data.question.slice(0, 80),
         })
         .select("id")
@@ -55,24 +56,32 @@ export const askQuestion = createServerFn({ method: "POST" })
       content: data.question,
     });
 
-    // --- RAG pipeline ---
-    const model = getModel(data.brandId, data.modelId);
-    if (!model) throw new Error("Unknown model");
-    const chunks: BrochureChunk[] = retrieveChunks(data.brandId, data.modelId, data.question, 4);
-
-    const contextText = chunks
-      .map((c, i) => `[${i + 1}] Section: ${c.section} · Page ${c.page}\n${c.text}`)
-      .join("\n\n");
-
     const key = process.env.LOVABLE_API_KEY;
     if (!key) throw new Error("Missing LOVABLE_API_KEY");
     const gateway = createLovableAiGatewayProvider(key);
 
-    const system = `You are Drive Wise, an automotive assistant grounded strictly on the official ${data.brand} ${data.model} brochure excerpts provided.
+    let system: string;
+    let prompt: string;
+    let chunks: BrochureChunk[] = [];
+
+    if (hasSelection) {
+      const model = getModel(data.brandId!, data.modelId!);
+      if (!model) throw new Error("Unknown model");
+      chunks = retrieveChunks(data.brandId!, data.modelId!, data.question, 4);
+      const contextText = chunks
+        .map((c, i) => `[${i + 1}] Section: ${c.section} · Page ${c.page}\n${c.text}`)
+        .join("\n\n");
+      system = `You are Drive Wise, an automotive assistant grounded strictly on the official ${data.brand} ${data.model} brochure excerpts provided.
 Answer concisely (max 5 sentences). If information is not present in the excerpts, say you couldn't find it in the brochure.
 Never invent specs. Do not add citations inline — a separate source panel is rendered.`;
-
-    const prompt = `Brochure excerpts for ${data.brand} ${data.model}:\n\n${contextText}\n\nUser question: ${data.question}`;
+      prompt = `Brochure excerpts for ${data.brand} ${data.model}:\n\n${contextText}\n\nUser question: ${data.question}`;
+    } else {
+      system = `You are Drive Wise, a friendly automotive advisor. No brand or model is selected yet.
+- For GENERAL guidance questions (mileage comparisons, family SUVs, safety reputations, budget picks, maintenance costs, brand comparisons, buying advice), give a helpful, concise recommendation (max 5 sentences). Be balanced and mention 2-3 options where useful.
+- For BROCHURE-SPECIFIC questions about a particular model's exact specs (e.g. "Does the XUV700 have ADAS?", "What is the engine capacity of the Creta?"), politely ask the user to first select the car brand and model on Drive Wise so you can give brochure-grounded answers with cited sources.
+Never invent exact specifications. Do not add citations.`;
+      prompt = `User question: ${data.question}`;
+    }
 
     let answer = "";
     try {
@@ -94,22 +103,25 @@ Never invent specs. Do not add citations inline — a separate source panel is r
       }
     }
 
-    const sources: SourceRef[] = chunks.map((c) => ({
-      brand: data.brand,
-      model: data.model,
-      section: c.section,
-      page: c.page,
-      chunkId: c.id,
-    }));
+    const sources: SourceRef[] = hasSelection
+      ? chunks.map((c) => ({
+          brand: data.brand!,
+          model: data.model!,
+          section: c.section,
+          page: c.page,
+          chunkId: c.id,
+        }))
+      : [];
 
     const metadata = {
-      brand: data.brand,
-      model: data.model,
-      brandId: data.brandId,
-      modelId: data.modelId,
-      version: "2025",
+      brand: data.brand ?? "General",
+      model: data.model ?? "General",
+      brandId: data.brandId ?? null,
+      modelId: data.modelId ?? null,
+      version: hasSelection ? "2025" : "n/a",
       retrievedChunks: chunks.length,
       sections: [...new Set(chunks.map((c) => c.section))],
+      mode: hasSelection ? "brochure" : "general",
     };
 
     await supabase.from("chat_messages").insert({
