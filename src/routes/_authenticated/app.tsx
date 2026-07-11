@@ -781,7 +781,7 @@ function ChatDock({ brand, model, threadId, onThreadId, onClose }: {
                 if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); send(); }
               }}
               rows={1}
-              placeholder={`Ask about the ${model.name}…`}
+              placeholder={model ? `Ask about the ${model.name}…` : "Ask anything — select a brand & model for brochure-grounded answers…"}
               className="flex-1 bg-transparent outline-none resize-none text-sm px-2 py-2 max-h-32"
             />
             <button onClick={send} disabled={mut.isPending || !input.trim()}
