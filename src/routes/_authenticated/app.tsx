@@ -651,8 +651,8 @@ function ChatDock({ brand, model, threadId, onThreadId, onClose }: {
               <Sparkles className="h-4 w-4 text-primary" />
             </div>
             <div className="min-w-0">
-              <div className="text-xs text-muted-foreground uppercase tracking-widest">{brand.name}</div>
-              <div className="font-display font-semibold truncate">{model.name} · Assistant</div>
+              <div className="text-xs text-muted-foreground uppercase tracking-widest">{brand?.name ?? "Drive Wise"}</div>
+              <div className="font-display font-semibold truncate">{model ? `${model.name} · Assistant` : "AI Assistant"}</div>
             </div>
           </div>
           <button onClick={onClose} className="rounded-lg p-2 hover:bg-secondary/60" aria-label="Close">
