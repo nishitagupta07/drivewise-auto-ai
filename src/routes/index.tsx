@@ -1,13 +1,14 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
+import { useEffect, useRef } from "react";
 import heroCar from "@/assets/hero-car.jpg";
-import { ArrowRight, Sparkles, ShieldCheck, Database, Cpu } from "lucide-react";
+import { ArrowRight, Sparkles, ShieldCheck, Database, Cpu, ChevronDown } from "lucide-react";
 import ParticleField from "@/components/drive-wise/ParticleField";
 import Footer from "@/components/drive-wise/Footer";
 
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
-      { title: "Drive Wise — Brochure-grounded automotive AI" },
+      { title: "Drive Wise — Official Brochures. Intelligent Answers." },
       { name: "description", content: "Choose a brand and model, then chat with an AI that answers only from the official brochure, with cited sources." },
     ],
   }),
@@ -15,6 +16,26 @@ export const Route = createFileRoute("/")({
 });
 
 function Landing() {
+  const carRef = useRef<HTMLDivElement>(null);
+  const glowRef = useRef<HTMLDivElement>(null);
+
+  // Subtle mouse parallax for the hero car
+  useEffect(() => {
+    function onMove(e: MouseEvent) {
+      const x = (e.clientX / window.innerWidth - 0.5) * 2; // -1..1
+      const y = (e.clientY / window.innerHeight - 0.5) * 2;
+      if (carRef.current) {
+        carRef.current.style.transform =
+          `translate3d(${x * 18}px, ${y * 10}px, 0) rotateX(${y * -4}deg) rotateY(${x * 6}deg)`;
+      }
+      if (glowRef.current) {
+        glowRef.current.style.transform = `translate3d(${x * 40}px, ${y * 24}px, 0)`;
+      }
+    }
+    window.addEventListener("mousemove", onMove);
+    return () => window.removeEventListener("mousemove", onMove);
+  }, []);
+
   return (
     <div className="min-h-screen relative overflow-hidden">
       {/* Nav */}
@@ -40,77 +61,98 @@ function Landing() {
         </div>
       </header>
 
-      {/* Hero */}
-      <section className="relative pt-32 pb-24 md:pt-40 md:pb-32">
+      {/* Full-viewport hero */}
+      <section
+        className="relative h-screen min-h-[720px] w-full flex items-center justify-center overflow-hidden"
+        style={{ perspective: "1200px" }}
+      >
+        {/* Background gradients */}
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,theme(colors.primary/0.18),transparent_60%)]" />
+        <div className="absolute inset-0 bg-gradient-to-b from-transparent via-background/40 to-background" />
         <ParticleField />
-        <div className="mx-auto max-w-7xl px-6 grid md:grid-cols-2 gap-12 items-center relative">
-          <div className="animate-fade-up">
-            <div className="inline-flex items-center gap-2 rounded-full glass px-3 py-1 text-xs text-muted-foreground mb-6">
-              <span className="h-1.5 w-1.5 rounded-full bg-primary animate-glow-pulse" />
-              Metadata-Aware · Brochure Grounded · Source Attributed
-            </div>
-            <h1 className="font-display text-6xl md:text-8xl font-bold tracking-tight leading-[0.95]">
-              Drive <span className="gradient-text">Wise</span>
-            </h1>
-            <p className="mt-6 text-lg md:text-xl text-muted-foreground max-w-xl leading-relaxed">
-              Helping users make informed car decisions through a
-              <span className="text-foreground"> brochure-grounded AI assistant.</span>
-            </p>
-            <div className="mt-10 flex flex-wrap items-center gap-4">
-              <Link
-                to="/app"
-                className="group relative inline-flex items-center gap-2 rounded-full bg-primary px-7 py-3.5 text-sm font-semibold text-primary-foreground shadow-glow hover:scale-[1.02] transition animate-glow-pulse"
-              >
-                Get Started
-                <ArrowRight className="h-4 w-4 transition group-hover:translate-x-1" />
-              </Link>
-              <a href="#how" className="rounded-full glass px-6 py-3.5 text-sm font-medium hover:bg-secondary/50 transition">
-                See how it works
-              </a>
-            </div>
 
-            <div className="mt-12 grid grid-cols-3 gap-6 max-w-md">
-              {[
-                { n: "4", l: "Brands" },
-                { n: "11", l: "Models" },
-                { n: "100%", l: "Cited" },
-              ].map((s) => (
-                <div key={s.l} className="text-center">
-                  <div className="text-3xl font-display font-bold gradient-text">{s.n}</div>
-                  <div className="text-xs text-muted-foreground mt-1">{s.l}</div>
-                </div>
-              ))}
+        {/* Ambient moving glow behind car */}
+        <div
+          ref={glowRef}
+          aria-hidden
+          className="pointer-events-none absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 h-[680px] w-[680px] rounded-full bg-primary/25 blur-[140px] transition-transform duration-500 ease-out"
+        />
+
+        {/* Center stage */}
+        <div className="relative z-10 mx-auto max-w-6xl px-6 text-center">
+          <div className="inline-flex items-center gap-2 rounded-full glass px-3 py-1 text-xs text-muted-foreground mb-8 animate-fade-up">
+            <span className="h-1.5 w-1.5 rounded-full bg-primary animate-glow-pulse" />
+            Metadata-Aware · Brochure Grounded · Source Attributed
+          </div>
+
+          <h1 className="font-display text-6xl md:text-8xl lg:text-9xl font-bold tracking-tight leading-[0.9] animate-fade-up">
+            Drive <span className="gradient-text">Wise</span>
+          </h1>
+
+          <p className="mt-6 text-lg md:text-2xl text-muted-foreground animate-fade-up" style={{ animationDelay: "80ms" }}>
+            Official Brochures. <span className="text-foreground">Intelligent Answers.</span>
+          </p>
+
+          {/* SUV visual — layered for depth */}
+          <div
+            className="relative mx-auto mt-10 md:mt-14 w-full max-w-3xl animate-fade-up"
+            style={{ animationDelay: "160ms" }}
+          >
+            <div
+              ref={carRef}
+              className="relative will-change-transform transition-transform duration-500 ease-out animate-float-slow"
+              style={{ transformStyle: "preserve-3d" }}
+            >
+              {/* Reflection halo */}
+              <div className="absolute -inset-6 rounded-[2rem] bg-primary/20 blur-3xl" />
+              <div className="relative rounded-[2rem] overflow-hidden gradient-border">
+                <img
+                  src={heroCar}
+                  alt="Premium concept SUV under blue studio light"
+                  width={1600}
+                  height={1000}
+                  className="w-full h-auto object-cover"
+                />
+                {/* Soft top gradient for ambient lighting */}
+                <div className="absolute inset-0 bg-gradient-to-b from-primary/10 via-transparent to-background/70" />
+                {/* Highlight sweep */}
+                <div className="absolute inset-x-0 top-0 h-1/3 bg-gradient-to-b from-white/10 to-transparent mix-blend-overlay" />
+              </div>
+              {/* Ground reflection */}
+              <div
+                aria-hidden
+                className="mx-auto mt-[-1px] h-16 w-[80%] rounded-[50%] bg-primary/25 blur-2xl opacity-70"
+              />
             </div>
           </div>
 
-          {/* Hero image */}
-          <div className="relative animate-scale-in">
-            <div className="absolute -inset-10 bg-primary/20 blur-3xl rounded-full" />
-            <div className="relative rounded-3xl overflow-hidden gradient-border animate-float-slow">
-              <img
-                src={heroCar}
-                alt="Premium concept SUV under blue studio light"
-                width={1600}
-                height={1000}
-                className="w-full h-auto object-cover"
-              />
-              <div className="absolute inset-0 bg-gradient-to-t from-background via-transparent to-transparent" />
-            </div>
-            <div className="absolute -bottom-6 -left-6 glass-strong rounded-2xl p-4 flex items-center gap-3 animate-float">
-              <div className="grid h-10 w-10 place-items-center rounded-xl bg-primary/20">
-                <ShieldCheck className="h-5 w-5 text-primary" />
-              </div>
-              <div>
-                <div className="text-sm font-semibold">Grounded answers</div>
-                <div className="text-xs text-muted-foreground">Every reply cites the brochure page</div>
-              </div>
-            </div>
+          {/* CTA */}
+          <div className="mt-10 flex flex-wrap items-center justify-center gap-4 animate-fade-up" style={{ animationDelay: "240ms" }}>
+            <Link
+              to="/app"
+              className="group relative inline-flex items-center gap-2 rounded-full bg-primary px-8 py-4 text-sm md:text-base font-semibold text-primary-foreground shadow-glow hover:scale-[1.03] transition animate-glow-pulse"
+            >
+              Get Started
+              <ArrowRight className="h-4 w-4 transition group-hover:translate-x-1" />
+            </Link>
+            <a href="#features" className="rounded-full glass px-6 py-4 text-sm font-medium hover:bg-secondary/50 transition">
+              See how it works
+            </a>
           </div>
         </div>
+
+        {/* Scroll indicator */}
+        <a
+          href="#features"
+          className="absolute bottom-6 left-1/2 -translate-x-1/2 text-muted-foreground/70 hover:text-foreground transition animate-float"
+          aria-label="Scroll down"
+        >
+          <ChevronDown className="h-6 w-6" />
+        </a>
       </section>
 
       {/* Features */}
-      <section id="features" className="py-24 relative">
+      <section id="features" className="py-24 relative scroll-mt-16">
         <div className="mx-auto max-w-7xl px-6">
           <div className="max-w-2xl mb-14">
             <h2 className="text-4xl md:text-5xl font-display font-bold tracking-tight">

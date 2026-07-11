@@ -29,8 +29,8 @@ function AppPage() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [activeThreadId, setActiveThreadId] = useState<string | null>(null);
 
-  const brand = brandId ? getBrand(brandId) : null;
-  const model = brand && modelId ? getModel(brand.id, modelId) : null;
+  const brand: Brand | null = brandId ? (getBrand(brandId) ?? null) : null;
+  const model: Model | null = brand && modelId ? (getModel(brand.id, modelId) ?? null) : null;
 
   return (
     <div className="min-h-screen relative">
@@ -77,17 +77,19 @@ function AppPage() {
         )}
       </main>
 
-      {/* Floating chat button */}
-      {step === "brochure" && brand && model && !chatOpen && (
+      {/* Floating chat button — always available */}
+      {!chatOpen && (
         <button
           onClick={() => setChatOpen(true)}
           className="fixed bottom-6 right-6 z-40 inline-flex items-center gap-2 rounded-full bg-primary px-5 py-3.5 text-sm font-semibold text-primary-foreground shadow-glow hover:scale-105 transition animate-glow-pulse"
+          aria-label="Open assistant"
         >
-          <MessageCircle className="h-4 w-4" /> Ask about {model.name}
+          <MessageCircle className="h-4 w-4" />
+          {brand && model ? `Ask about ${model.name}` : "Ask Drive Wise"}
         </button>
       )}
 
-      {chatOpen && brand && model && (
+      {chatOpen && (
         <ChatDock
           brand={brand}
           model={model}
@@ -532,7 +534,7 @@ const PIPELINE_STEPS = [
 ];
 
 function ChatDock({ brand, model, threadId, onThreadId, onClose }: {
-  brand: Brand; model: Model; threadId: string | null; onThreadId: (id: string | null) => void; onClose: () => void;
+  brand: Brand | null; model: Model | null; threadId: string | null; onThreadId: (id: string | null) => void; onClose: () => void;
 }) {
   const [input, setInput] = useState("");
   const [messages, setMessages] = useState<ChatMsg[]>([]);
@@ -573,13 +575,24 @@ function ChatDock({ brand, model, threadId, onThreadId, onClose }: {
 
   const mut = useMutation({
     mutationFn: async (q: string) => {
+      if (!brand || !model) {
+        // Local guard response — no server call until brand/model selected
+        await new Promise((r) => setTimeout(r, 200));
+        return {
+          threadId: null as string | null,
+          answer: "Please select a car brand and model first so I can answer using the correct brochure.",
+          sources: [] as SourceRef[],
+          metadata: undefined as Record<string, unknown> | undefined,
+          _local: true as const,
+        };
+      }
       // Animate pipeline steps
       for (let i = 0; i < PIPELINE_STEPS.length - 1; i++) {
         setLoadingStep(i);
         await new Promise((r) => setTimeout(r, 380));
       }
       setLoadingStep(PIPELINE_STEPS.length - 1);
-      return await ask({
+      const res = await ask({
         data: {
           threadId,
           brand: brand.name, brandId: brand.id,
@@ -587,15 +600,16 @@ function ChatDock({ brand, model, threadId, onThreadId, onClose }: {
           question: q,
         },
       });
+      return { ...res, _local: false as const };
     },
     onSuccess: (res) => {
-      if (!threadId) onThreadId(res.threadId);
+      if (!res._local && res.threadId && !threadId) onThreadId(res.threadId);
       setMessages((prev) => [...prev, {
         id: crypto.randomUUID(), role: "assistant", content: res.answer,
         sources: res.sources, metadata: res.metadata, createdAt: new Date().toISOString(),
       }]);
       setLoadingStep(-1);
-      qc.invalidateQueries({ queryKey: ["threads"] });
+      if (!res._local) qc.invalidateQueries({ queryKey: ["threads"] });
       inputRef.current?.focus();
     },
     onError: (err) => {
@@ -612,13 +626,17 @@ function ChatDock({ brand, model, threadId, onThreadId, onClose }: {
     mut.mutate(q);
   }
 
-  const suggestions = useMemo(() => [
+  const suggestions = useMemo(() => model ? [
     "Does this car have ADAS?",
     `What is the mileage of the ${model.name}?`,
     "How many airbags are there?",
     "Does it support Android Auto?",
     "What engine does it use?",
-  ], [model.name]);
+  ] : [
+    "What can you help me with?",
+    "How does Drive Wise work?",
+    "Which brands are supported?",
+  ], [model]);
 
   const lastMetadata = [...messages].reverse().find((m) => m.role === "assistant" && m.metadata)?.metadata;
 
@@ -633,8 +651,8 @@ function ChatDock({ brand, model, threadId, onThreadId, onClose }: {
               <Sparkles className="h-4 w-4 text-primary" />
             </div>
             <div className="min-w-0">
-              <div className="text-xs text-muted-foreground uppercase tracking-widest">{brand.name}</div>
-              <div className="font-display font-semibold truncate">{model.name} · Assistant</div>
+              <div className="text-xs text-muted-foreground uppercase tracking-widest">{brand?.name ?? "Drive Wise"}</div>
+              <div className="font-display font-semibold truncate">{model ? `${model.name} · Assistant` : "AI Assistant"}</div>
             </div>
           </div>
           <button onClick={onClose} className="rounded-lg p-2 hover:bg-secondary/60" aria-label="Close">
@@ -743,8 +761,8 @@ function ChatDock({ brand, model, threadId, onThreadId, onClose }: {
           </button>
           {showMetadata && (
             <div className="mt-2 text-[11px] grid grid-cols-2 gap-2">
-              <MetaRow k="Brand" v={brand.name} />
-              <MetaRow k="Model" v={model.name} />
+              <MetaRow k="Brand" v={brand?.name ?? "—"} />
+              <MetaRow k="Model" v={model?.name ?? "—"} />
               <MetaRow k="Version" v="2025" />
               <MetaRow k="Retrieved chunks" v={String((lastMetadata as { retrievedChunks?: number } | undefined)?.retrievedChunks ?? "—")} />
               <MetaRow k="Sections" v={(lastMetadata as { sections?: string[] } | undefined)?.sections?.join(", ") ?? "—"} full />
@@ -763,7 +781,7 @@ function ChatDock({ brand, model, threadId, onThreadId, onClose }: {
                 if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); send(); }
               }}
               rows={1}
-              placeholder={`Ask about the ${model.name}…`}
+              placeholder={model ? `Ask about the ${model.name}…` : "Ask anything — select a brand & model for brochure-grounded answers…"}
               className="flex-1 bg-transparent outline-none resize-none text-sm px-2 py-2 max-h-32"
             />
             <button onClick={send} disabled={mut.isPending || !input.trim()}
