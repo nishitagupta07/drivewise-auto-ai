@@ -98,11 +98,12 @@ function Landing() {
             className="relative mx-auto mt-10 md:mt-12 w-full max-w-3xl animate-fade-up"
             style={{ animationDelay: "160ms" }}
           >
-            <div
-              ref={carRef}
-              className="relative will-change-transform transition-transform duration-[900ms] ease-out animate-float-slow"
-              style={{ transformStyle: "preserve-3d" }}
-            >
+            <div className="animate-float-slow" style={{ transformStyle: "preserve-3d" }}>
+              <div
+                ref={carRef}
+                className="relative will-change-transform transition-transform duration-[900ms] ease-out"
+                style={{ transformStyle: "preserve-3d" }}
+              >
               {/* Layered halos for depth */}
               <div className="absolute -inset-10 rounded-[3rem] bg-primary/20 blur-3xl opacity-70" />
               <div className="absolute -inset-4 rounded-[2.5rem] bg-primary/10 blur-2xl" />
