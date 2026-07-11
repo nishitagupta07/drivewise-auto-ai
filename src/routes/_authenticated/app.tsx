@@ -29,8 +29,8 @@ function AppPage() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [activeThreadId, setActiveThreadId] = useState<string | null>(null);
 
-  const brand = brandId ? getBrand(brandId) : null;
-  const model = brand && modelId ? getModel(brand.id, modelId) : null;
+  const brand: Brand | null = brandId ? (getBrand(brandId) ?? null) : null;
+  const model: Model | null = brand && modelId ? (getModel(brand.id, modelId) ?? null) : null;
 
   return (
     <div className="min-h-screen relative">
