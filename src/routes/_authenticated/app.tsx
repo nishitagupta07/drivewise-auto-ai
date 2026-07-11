@@ -534,7 +534,7 @@ const PIPELINE_STEPS = [
 ];
 
 function ChatDock({ brand, model, threadId, onThreadId, onClose }: {
-  brand: Brand; model: Model; threadId: string | null; onThreadId: (id: string | null) => void; onClose: () => void;
+  brand: Brand | null; model: Model | null; threadId: string | null; onThreadId: (id: string | null) => void; onClose: () => void;
 }) {
   const [input, setInput] = useState("");
   const [messages, setMessages] = useState<ChatMsg[]>([]);
