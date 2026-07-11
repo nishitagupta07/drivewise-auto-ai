@@ -675,8 +675,9 @@ const PIPELINE_STEPS = [
   "Finalizing answer…",
 ];
 
-function ChatDock({ brand, model, threadId, onThreadId, onClose }: {
+function ChatDock({ brand, model, threadId, onThreadId, onClose, pendingInput, onPendingConsumed }: {
   brand: Brand | null; model: Model | null; threadId: string | null; onThreadId: (id: string | null) => void; onClose: () => void;
+  pendingInput?: string | null; onPendingConsumed?: () => void;
 }) {
   const [input, setInput] = useState("");
   const [messages, setMessages] = useState<ChatMsg[]>([]);
@@ -688,6 +689,15 @@ function ChatDock({ brand, model, threadId, onThreadId, onClose }: {
   const scrollRef = useRef<HTMLDivElement>(null);
   const qc = useQueryClient();
   const inputRef = useRef<HTMLTextAreaElement>(null);
+
+  useEffect(() => {
+    if (pendingInput) {
+      setInput(pendingInput);
+      inputRef.current?.focus();
+      onPendingConsumed?.();
+    }
+  }, [pendingInput, onPendingConsumed]);
+
 
   // Load thread messages when threadId changes
   useEffect(() => {
