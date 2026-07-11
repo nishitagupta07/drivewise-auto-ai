@@ -787,9 +787,11 @@ function ChatDock({ brand, model, threadId, onThreadId, onClose, pendingInput, o
     "Does it support Android Auto?",
     "What engine does it use?",
   ] : [
-    "What can you help me with?",
-    "How does Drive Wise work?",
-    "Which brands are supported?",
+    "Which SUV is best for a family of 5?",
+    "Which brand offers better mileage?",
+    "Which brand is known for safety?",
+    "Which car should I buy under ₹15 lakh?",
+    "Which brand has the lowest maintenance cost?",
   ], [model]);
 
   const lastMetadata = [...messages].reverse().find((m) => m.role === "assistant" && m.metadata)?.metadata;
