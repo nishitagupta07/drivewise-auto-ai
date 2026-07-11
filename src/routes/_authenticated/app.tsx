@@ -12,7 +12,16 @@ import {
   Car, Shield, Gauge, Cpu, Palette, Camera, Cog, LogOut, ChevronRight,
   PanelLeftOpen, PanelLeftClose, Info, FileText, Wrench, Layers,
   Zap, Fuel, Users, Wind, Sun, Music, Smartphone, ChevronDown, Trash2,
+  History, Clock,
 } from "lucide-react";
+
+type RecentSearch = {
+  id: string;
+  question: string;
+  brand: string | null;
+  model: string | null;
+  at: string;
+};
 
 export const Route = createFileRoute("/_authenticated/app")({
   head: () => ({ meta: [{ title: "Drive Wise — Explore" }, { name: "robots", content: "noindex" }] }),
