@@ -7,10 +7,10 @@ import { createLovableAiGatewayProvider } from "./ai-gateway.server";
 
 const AskInput = z.object({
   threadId: z.string().uuid().nullable(),
-  brand: z.string().min(1),
-  brandId: z.string().min(1),
-  model: z.string().min(1),
-  modelId: z.string().min(1),
+  brand: z.string().nullable(),
+  brandId: z.string().nullable(),
+  model: z.string().nullable(),
+  modelId: z.string().nullable(),
   question: z.string().min(1).max(1000),
 });
 
