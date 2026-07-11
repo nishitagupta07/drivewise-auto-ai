@@ -575,17 +575,6 @@ function ChatDock({ brand, model, threadId, onThreadId, onClose }: {
 
   const mut = useMutation({
     mutationFn: async (q: string) => {
-      if (!brand || !model) {
-        // Local guard response — no server call until brand/model selected
-        await new Promise((r) => setTimeout(r, 200));
-        return {
-          threadId: null as string | null,
-          answer: "Please select a car brand and model first so I can answer using the correct brochure.",
-          sources: [] as SourceRef[],
-          metadata: undefined as Record<string, unknown> | undefined,
-          _local: true as const,
-        };
-      }
       // Animate pipeline steps
       for (let i = 0; i < PIPELINE_STEPS.length - 1; i++) {
         setLoadingStep(i);
@@ -595,21 +584,23 @@ function ChatDock({ brand, model, threadId, onThreadId, onClose }: {
       const res = await ask({
         data: {
           threadId,
-          brand: brand.name, brandId: brand.id,
-          model: model.name, modelId: model.id,
+          brand: brand?.name ?? null,
+          brandId: brand?.id ?? null,
+          model: model?.name ?? null,
+          modelId: model?.id ?? null,
           question: q,
         },
       });
-      return { ...res, _local: false as const };
+      return res;
     },
     onSuccess: (res) => {
-      if (!res._local && res.threadId && !threadId) onThreadId(res.threadId);
+      if (res.threadId && !threadId) onThreadId(res.threadId);
       setMessages((prev) => [...prev, {
         id: crypto.randomUUID(), role: "assistant", content: res.answer,
         sources: res.sources, metadata: res.metadata, createdAt: new Date().toISOString(),
       }]);
       setLoadingStep(-1);
-      if (!res._local) qc.invalidateQueries({ queryKey: ["threads"] });
+      qc.invalidateQueries({ queryKey: ["threads"] });
       inputRef.current?.focus();
     },
     onError: (err) => {
@@ -622,6 +613,17 @@ function ChatDock({ brand, model, threadId, onThreadId, onClose }: {
     const q = input.trim();
     if (!q || mut.isPending) return;
     setMessages((prev) => [...prev, { id: crypto.randomUUID(), role: "user", content: q, createdAt: new Date().toISOString() }]);
+    // Save to recent searches (localStorage)
+    try {
+      const raw = localStorage.getItem("dw:recent-searches");
+      const arr = raw ? (JSON.parse(raw) as RecentSearch[]) : [];
+      const next: RecentSearch[] = [
+        { id: crypto.randomUUID(), question: q, brand: brand?.name ?? null, model: model?.name ?? null, at: new Date().toISOString() },
+        ...arr,
+      ].slice(0, 50);
+      localStorage.setItem("dw:recent-searches", JSON.stringify(next));
+      window.dispatchEvent(new Event("dw:recent-searches-updated"));
+    } catch { /* ignore storage errors */ }
     setInput("");
     mut.mutate(q);
   }
