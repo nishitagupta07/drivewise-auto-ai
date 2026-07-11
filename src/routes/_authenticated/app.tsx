@@ -575,13 +575,24 @@ function ChatDock({ brand, model, threadId, onThreadId, onClose }: {
 
   const mut = useMutation({
     mutationFn: async (q: string) => {
+      if (!brand || !model) {
+        // Local guard response — no server call until brand/model selected
+        await new Promise((r) => setTimeout(r, 200));
+        return {
+          threadId: null as string | null,
+          answer: "Please select a car brand and model first so I can answer using the correct brochure.",
+          sources: [] as SourceRef[],
+          metadata: undefined as Record<string, unknown> | undefined,
+          _local: true as const,
+        };
+      }
       // Animate pipeline steps
       for (let i = 0; i < PIPELINE_STEPS.length - 1; i++) {
         setLoadingStep(i);
         await new Promise((r) => setTimeout(r, 380));
       }
       setLoadingStep(PIPELINE_STEPS.length - 1);
-      return await ask({
+      const res = await ask({
         data: {
           threadId,
           brand: brand.name, brandId: brand.id,
@@ -589,15 +600,16 @@ function ChatDock({ brand, model, threadId, onThreadId, onClose }: {
           question: q,
         },
       });
+      return { ...res, _local: false as const };
     },
     onSuccess: (res) => {
-      if (!threadId) onThreadId(res.threadId);
+      if (!res._local && res.threadId && !threadId) onThreadId(res.threadId);
       setMessages((prev) => [...prev, {
         id: crypto.randomUUID(), role: "assistant", content: res.answer,
         sources: res.sources, metadata: res.metadata, createdAt: new Date().toISOString(),
       }]);
       setLoadingStep(-1);
-      qc.invalidateQueries({ queryKey: ["threads"] });
+      if (!res._local) qc.invalidateQueries({ queryKey: ["threads"] });
       inputRef.current?.focus();
     },
     onError: (err) => {
@@ -614,13 +626,17 @@ function ChatDock({ brand, model, threadId, onThreadId, onClose }: {
     mut.mutate(q);
   }
 
-  const suggestions = useMemo(() => [
+  const suggestions = useMemo(() => model ? [
     "Does this car have ADAS?",
     `What is the mileage of the ${model.name}?`,
     "How many airbags are there?",
     "Does it support Android Auto?",
     "What engine does it use?",
-  ], [model.name]);
+  ] : [
+    "What can you help me with?",
+    "How does Drive Wise work?",
+    "Which brands are supported?",
+  ], [model]);
 
   const lastMetadata = [...messages].reverse().find((m) => m.role === "assistant" && m.metadata)?.metadata;
 
