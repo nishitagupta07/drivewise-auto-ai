@@ -129,6 +129,7 @@ function Landing() {
                 className="mx-auto mt-[-8px] h-16 w-[70%] rounded-[50%] bg-primary/30 blur-2xl opacity-70"
               />
             </div>
+            </div>
           </div>
 
           {/* CTAs */}
