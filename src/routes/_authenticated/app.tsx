@@ -761,8 +761,8 @@ function ChatDock({ brand, model, threadId, onThreadId, onClose }: {
           </button>
           {showMetadata && (
             <div className="mt-2 text-[11px] grid grid-cols-2 gap-2">
-              <MetaRow k="Brand" v={brand.name} />
-              <MetaRow k="Model" v={model.name} />
+              <MetaRow k="Brand" v={brand?.name ?? "—"} />
+              <MetaRow k="Model" v={model?.name ?? "—"} />
               <MetaRow k="Version" v="2025" />
               <MetaRow k="Retrieved chunks" v={String((lastMetadata as { retrievedChunks?: number } | undefined)?.retrievedChunks ?? "—")} />
               <MetaRow k="Sections" v={(lastMetadata as { sections?: string[] } | undefined)?.sections?.join(", ") ?? "—"} full />
