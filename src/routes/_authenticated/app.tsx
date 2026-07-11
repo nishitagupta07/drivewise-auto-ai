@@ -77,17 +77,19 @@ function AppPage() {
         )}
       </main>
 
-      {/* Floating chat button */}
-      {step === "brochure" && brand && model && !chatOpen && (
+      {/* Floating chat button — always available */}
+      {!chatOpen && (
         <button
           onClick={() => setChatOpen(true)}
           className="fixed bottom-6 right-6 z-40 inline-flex items-center gap-2 rounded-full bg-primary px-5 py-3.5 text-sm font-semibold text-primary-foreground shadow-glow hover:scale-105 transition animate-glow-pulse"
+          aria-label="Open assistant"
         >
-          <MessageCircle className="h-4 w-4" /> Ask about {model.name}
+          <MessageCircle className="h-4 w-4" />
+          {brand && model ? `Ask about ${model.name}` : "Ask Drive Wise"}
         </button>
       )}
 
-      {chatOpen && brand && model && (
+      {chatOpen && (
         <ChatDock
           brand={brand}
           model={model}
