@@ -36,7 +36,9 @@ function AppPage() {
   const [modelId, setModelId] = useState<string | null>(null);
   const [chatOpen, setChatOpen] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [recentOpen, setRecentOpen] = useState(false);
   const [activeThreadId, setActiveThreadId] = useState<string | null>(null);
+  const [pendingInput, setPendingInput] = useState<string | null>(null);
 
   const brand: Brand | null = brandId ? (getBrand(brandId) ?? null) : null;
   const model: Model | null = brand && modelId ? (getModel(brand.id, modelId) ?? null) : null;
@@ -45,6 +47,7 @@ function AppPage() {
     <div className="min-h-screen relative">
       <AppHeader
         onOpenHistory={() => setSidebarOpen(true)}
+        onOpenRecent={() => setRecentOpen(true)}
       />
 
       <HistorySidebar
@@ -60,6 +63,21 @@ function AppPage() {
           setStep(m ? "brochure" : "brand");
           setChatOpen(true);
           setSidebarOpen(false);
+        }}
+      />
+
+      <RecentSearchesPanel
+        open={recentOpen}
+        onClose={() => setRecentOpen(false)}
+        onPick={(r) => {
+          const b = r.brand ? BRANDS.find((x) => x.name === r.brand) : null;
+          const m = b && r.model ? b.models.find((x) => x.name === r.model) : null;
+          setBrandId(b?.id ?? null);
+          setModelId(m?.id ?? null);
+          setStep(m ? "brochure" : b ? "model" : "brand");
+          setPendingInput(r.question);
+          setChatOpen(true);
+          setRecentOpen(false);
         }}
       />
 
@@ -105,6 +123,8 @@ function AppPage() {
           threadId={activeThreadId}
           onThreadId={setActiveThreadId}
           onClose={() => setChatOpen(false)}
+          pendingInput={pendingInput}
+          onPendingConsumed={() => setPendingInput(null)}
         />
       )}
     </div>
